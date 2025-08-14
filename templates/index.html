@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wild Animal Detection</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 10px;
+        }
+        h1 {
+            color: #007bff;
+            font-size: 1.5em;
+        }
+        .video-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 20px;
+        }
+        img {
+            width: 90%;
+            max-width: 640px;
+            height: auto;
+            border: 3px solid #007bff;
+            border-radius: 10px;
+        }
+        #alert-message {
+            font-size: 1.5em;
+            color: red;
+            margin-top: 15px;
+            font-weight: bold;
+            display: none; /* Initially hidden */
+        }
+        #enable-alerts {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 1em;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>Wild Animal Detection System</h1>
+
+    <button id="enable-alerts">🔊 Enable Sound & Vibration</button>
+
+    <div class="video-container">
+        <img src="{{ url_for('video_feed') }}" id="video-feed">
+    </div>
+
+    <p id="alert-message"></p>
+
+    <audio id="alert-sound">
+        <source src="https://www.fesliyanstudios.com/play-mp3/4388" type="audio/mpeg">
+        Your browser does not support the audio element.
+    </audio>
+
+    <script>
+        let lastAnimal = "";  // Store last detected animal to avoid duplicate alerts
+        const alertSound = document.getElementById("alert-sound");
+        let alertsEnabled = false; // Ensures user interaction before playing sound
+
+        document.getElementById("enable-alerts").addEventListener("click", function() {
+            alertsEnabled = true;
+            this.style.display = "none"; // Hide button after enabling
+
+            // Play a short sound to indicate alerts are active
+            alertSound.play();
+            setTimeout(() => alertSound.pause(), 800);
+        });
+
+        function fetchAnimal() {
+            fetch('/get_animal')
+                .then(response => response.json())
+                .then(data => {
+                    let detectedAnimal = data.animal;
+                    let alertMessage = document.getElementById("alert-message");
+
+                    if (detectedAnimal !== "Detecting...") {
+                        alertMessage.innerText = detectedAnimal + " spotted! Please be safe.";
+                        alertMessage.style.display = "block"; // Show alert message
+
+                        // Play sound for 0.8 sec & vibrate if a new animal is detected
+                        if (alertsEnabled && detectedAnimal !== lastAnimal) {
+                            alertSound.play();
+                            setTimeout(() => alertSound.pause(), 800);
+
+                            // Vibrate for 800ms (only on mobile)
+                            if ("vibrate" in navigator && /Mobi|Android/i.test(navigator.userAgent)) {
+                                navigator.vibrate(800);
+                            }
+
+                            lastAnimal = detectedAnimal;  // Update last detected animal
+                        }
+                    } else {
+                        alertMessage.style.display = "none"; // Hide message when no animal is detected
+                    }
+                })
+                .catch(error => console.log("Error fetching animal:", error));
+        }
+
+        setInterval(fetchAnimal, 3000); // Update detected animal every 3 seconds
+    </script>
+</body>
+</html>
